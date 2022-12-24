@@ -1,0 +1,63 @@
+---
+- name: Install Docker
+  hosts: docker_server
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Ensuring python3 and docker are installed
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.27.4/docker-compose-{{lookup('pipe', 'uname -s')}}-{{lookup('pipe', 'uname -m')}}
+        dest: /usr/local/bin/docker-compose
+        mode: +x #execute mode to allow execution rights
+    - name: Ensuring docker daemon is running
+      systemd:
+          name: docker
+          state: started
+    - name: Install docker python module
+      pip:
+        name:
+          - docker
+          - docker-compose
+
+- name: Add ec2-user to docker group
+  hosts: docker_server
+  become: yes
+  tasks:
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+    - name: Reconnect to server session
+      meta: reset_connection
+
+- name: Start docker containers
+  hosts: docker_server
+#  vars_prompt:
+#    - name: docker_password
+#      prompt: Enter password for docker registry?
+  vars_files:
+    - project-vars.yaml
+  tasks:
+    - name: Copy docker compose
+      copy:
+        src: C:\ansible\ansible-code-usage\docker-compose-node-image.yaml
+        dest: /home/ec2-user/docker-compose.yaml
+    - name: Docker login
+      docker_login:
+        registry_url: https://index.docker.io/v1/
+        username: trex1987
+        password: "{{docker_password}}"
+    - name: Start container from compose
+      docker_compose:
+        project_src: /home/ec2-user
+        state: present # default is present ==> docker compose -f *.yaml up

@@ -1,0 +1,91 @@
+---
+#- name: Wait for ssh connection
+#  hosts: all
+#  vars:
+#      ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: all
+#      ansible_python_interpreter: /usr/bin/python
+#  tasks:
+#    - name: Wait for EC2 instance SSH to become available
+#      wait_for:
+#        state: running
+#        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}' #"{{ ec2_instance_public_ip }}"
+#        port: 22
+#      vars:
+#        ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: all
+#        ansible_python_interpreter: /usr/bin/python
+
+- name: Wait for ssh connection
+  hosts: all
+  vars:
+    ansible_connection: local #execute task from my local machine to connect to the hosts:... we get as a parameter from hosts: all
+    ansible_python_interpreter: /usr/bin/python
+  tasks:
+    - name: Wait for EC2 instance SSH to become available
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_regex: OpenSSH
+        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
+
+- name: Install Docker
+  hosts: all
+  become: yes
+  gather_facts: false
+  tasks:
+    - name: Ensuring python3 and docker are installed
+      vars:
+        ansible_python_interpreter: /usr/bin/python
+      yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.27.4/docker-compose-{{lookup('pipe', 'uname -s')}}-{{lookup('pipe', 'uname -m')}}
+        dest: /usr/local/bin/docker-compose
+        mode: +x # execute mode to allow execution rights
+    - name: Making sure docker daemon is running
+      systemd:
+          name: docker
+          state: started
+    - name: Install docker python module
+      pip:
+        name:
+          - docker
+          - docker-compose
+
+- name: Create new linux user
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create new linux user
+      user:
+        name: trex
+        groups: adm,docker   #"{{user_groups}}" #adm, docker # check on ec2 server with groups
+
+- name: Start docker containers
+  hosts: all
+  become: yes
+  become_user: trex
+#  vars_prompt:
+#    - name: docker_password
+#      prompt: Enter password for docker registry?
+  vars_files:
+    - project-vars.yaml
+  tasks:
+    - name: Copy docker compose
+      copy:
+        src: ansible-code-usage/docker-compose-node-image.yaml
+        dest: /home/trex/docker-compose.yaml
+    - name: Docker login
+      docker_login:
+        registry_url: https://index.docker.io/v1/
+        username: trex1987
+        password: "{{docker_password}}"
+    - name: Start container from compose
+      docker_compose:
+        project_src: /home/trex
+        state: present # default is present ==> docker compose -f *.yaml up

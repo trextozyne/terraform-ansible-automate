@@ -1,0 +1,51 @@
+---
+- name: Install node amd npm
+  hosts: nodeserver
+  tasks:
+    - name: update apt repository and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Install nodejs and npm
+      apt:
+        pkg:
+          - nodejs
+          - npm
+
+- name: Create new linux user for node app
+  hosts: nodeserver
+  vars_files:
+    - project-vars.yaml
+  tasks:
+    - name: Create linux user
+      user:
+        name: "{{linux_name}}"
+        comment: "{{linux_name}} Admin"
+        group: admin
+      register: user_creation_result
+    - debug: msg={{user_creation_result}}
+
+- name: Deploy nodejs app
+  hosts: nodeserver
+  become: true
+  become_user: "{{linux_name}}"
+  vars_files:
+    - project-vars.yaml
+#  vars:
+#    - user_home_dir: /home/{{linux_name}}
+  tasks:
+    - name: unpack the nodejs file
+      unarchive:
+        src: ./node.js-server-{{version}}.tgz
+        dest: "{{user_home_dir}}"
+      register: user_creation_result
+    - debug: msg={{user_creation_result}}
+    - name: Install dependencies
+      npm:
+        path: "{{location}}/package"
+    - name: Start the application
+      command: node {{location}}/package/server
+      async: 1000
+      poll: 0
+    - name: Ensure app is running
+      shell: ps aux | grep node
+      register: app_status
+    - debug: msg={{app_status.stdout_lines}}
