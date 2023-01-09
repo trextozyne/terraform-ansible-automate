@@ -1,8 +1,8 @@
 ---
 #- name: Wait for ssh connection
-#  hosts: all #docker_server
+#  hosts: aws_ec2 # gotten after running inventory with --graph flag
 #  vars:
-#      ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: all #docker_server
+#      ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: aws_ec2 # gotten after running inventory with --graph flag
 #      ansible_python_interpreter: /usr/bin/python
 #  tasks:
 #    - name: Wait for EC2 instance SSH to become available
@@ -11,13 +11,13 @@
 #        host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}' #"{{ ec2_instance_public_ip }}"
 #        port: 22
 #      vars:
-#        ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: all #docker_server
+#        ansible_connection: local #execute task from localhost to connect to the hosts:... we get as a parameter from hosts: aws_ec2 # gotten after running inventory with --graph flag
 #        ansible_python_interpreter: /usr/bin/python
 
 - name: Wait for ssh connection
-  hosts: all #docker_server
+  hosts: aws_ec2 # gotten after running inventory with --graph flag
   vars:
-    ansible_connection: local #execute task from my local machine to connect to the hosts:... we get as a parameter from hosts: all #docker_server
+    ansible_connection: local #execute task from my local machine to connect to the hosts:... we get as a parameter from hosts: aws_ec2 # gotten after running inventory with --graph flag
     ansible_python_interpreter: /usr/bin/python
   tasks:
     - name: Wait for EC2 instance SSH to become available
@@ -29,7 +29,7 @@
         host: '{{ (ansible_ssh_host|default(ansible_host))|default(inventory_hostname) }}'
 
 - name: Install Docker
-  hosts: all #docker_server
+  hosts: aws_ec2 # gotten after running inventory with --graph flag
   become: yes
   gather_facts: false
   tasks:
@@ -58,7 +58,7 @@
           - docker-compose
 
 - name: Create new linux user
-  hosts: all #docker_server
+  hosts: aws_ec2 # gotten after running inventory with --graph flag
   become: yes
   tasks:
     - name: Create new linux user
@@ -67,7 +67,7 @@
         groups: adm,docker   #"{{user_groups}}" #adm, docker # check on ec2 server with groups
 
 - name: Start docker containers
-  hosts: all #docker_server
+  hosts: aws_ec2 # gotten after running inventory with --graph flag
   become: yes
   become_user: trex
 #  vars_prompt:
