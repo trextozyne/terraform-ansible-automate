@@ -60,11 +60,8 @@
 - name: Create new linux user
   hosts: all #docker_server
   become: yes
-  tasks:
-    - name: Create new linux user
-      user:
-        name: trex
-        groups: adm,docker   #"{{user_groups}}" #adm, docker # check on ec2 server with groups
+  roles:
+    - create_user
 
 - name: Start docker containers
   hosts: all #docker_server
@@ -75,17 +72,5 @@
 #      prompt: Enter password for docker registry?
   vars_files:
     - project-vars.yaml
-  tasks:
-    - name: Copy docker compose
-      copy:
-        src: ansible-code-usage/docker-compose-node-image.yaml
-        dest: /home/trex/docker-compose.yaml
-    - name: Docker login
-      docker_login:
-        registry_url: https://index.docker.io/v1/
-        username: trex1987
-        password: "{{docker_password}}"
-    - name: Start container from compose
-      docker_compose:
-        project_src: /home/trex
-        state: present # default is present ==> docker compose -f *.yaml up
+  roles:
+    - start_container
