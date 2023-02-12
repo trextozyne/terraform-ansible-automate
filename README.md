@@ -1,2 +1,2 @@
 # terraform-ansible-automate
-Consists of various Ansible Concepts that are generally used create or automate resources to AWS or DigitalOcean
+Using terraform to run Ansible playbook using Userdata and create resources on AWS or EC2
